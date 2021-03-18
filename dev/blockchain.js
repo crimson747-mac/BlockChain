@@ -24,8 +24,8 @@ BlockChain.prototype.createNewBlock = function(nonce, previousBlockHash, hash) {
 
     // 새로운 블럭 생성 후 기존의 트랜잭션 초기화
     this.pendingTransactions = [];
-
     this.chain.push(newBlock);
+    
     return newBlock;
 }
 
@@ -75,7 +75,7 @@ BlockChain.prototype.hashBlock = function(previousBlockHash, currentBlockData, n
  * 작업 증명: 블럭의 적법성 검증을 수행
  * @param {string} previousBlockHash: 이전 블럭의 해시
  * @param {string} currentBlockData: 현재 블럭의 데이터
- * @returns 
+ * @returns: 증명에 성공한 임의의 숫자
  */
 BlockChain.prototype.proofOfWork = function(previousBlockHash, currentBlockData) {
   let nonce = 0;
