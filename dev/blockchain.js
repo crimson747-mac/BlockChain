@@ -1,6 +1,7 @@
 const currentNodeUrl = process.argv[3];
 
 const sha256 = require('sha256');
+const {v1} = require('uuid');
 
 function BlockChain() {
   this.chain = []; // 채굴한 모든 블록이  배열 안에 체인으로 저장
@@ -54,10 +55,15 @@ BlockChain.prototype.createNewTransaction = function(amount, sender, recipient) 
   const newTransaction = {
     amount: amount,
     sender: sender,
-    recipient: recipient
+    recipient: recipient,
+    transactionId: v1().split('-').join('')
   };
 
-  this.pendingTransactions.push(newTransaction);
+  return newTransaction;
+}
+
+BlockChain.prototype.addTransactionToPendingTransactions = function(transactionObj) {
+  this.pendingTransactions.push(transactionObj);
 
   return this.getLastBlock()['index'] + 1;
 }

@@ -18,13 +18,37 @@ app.get('/blockchain', (req, res) => {
 });
 
 app.post('/transaction', (req, res) => {
-  const {amount, sender, recipient} = req.body;
-  const blockIndex = bitcoin.createNewTransaction(amount, sender, recipient);
+  const {newTransaction} = req.body;
+  const blockIndex = bitcoin.addTransactionToPendingTransactions(newTransaction);
 
-  return res.json({ note: `Transaction will be added in block ${blockIndex}.`});
+  return res.json({note: `Transaction will be added in block ${blockIndex}`})
+});
+
+app.post('/transaction/broadcast', (req, res) => {
+  const {amount, sender, recipient} = req.body;
+  const newTransaction = bitcoin.createNewTransaction(amount, sender, recipient);
+  bitcoin.addTransactionToPendingTransactions(newTransaction);
+
+  const requestPromises = [];
+  bitcoin.netWorkNodes.forEach(networkNodeUrl => {
+    const requestOptions = {
+      url: networkNodeUrl + '/transaction',
+      method: 'post',
+      headers: {'Content-Type': 'application/json'},
+      data: {newTransaction}
+    }
+
+    requestPromises.push(axios(requestOptions));
+  })
+
+  Promise.all(requestPromises)
+  .then(data => {
+    return res.json({note: 'Transaction created an broadcast successfully'});
+  })
 });
 
 app.get('/mine', (req, res) => {
+  // 1. 블록 생성
   const lastBlock = bitcoin.getLastBlock();
   const previousBlockHash = lastBlock['hash'];
   const currentBlockData = {
@@ -40,11 +64,63 @@ app.get('/mine', (req, res) => {
 
   const newBlock = bitcoin.createNewBlock(nonce, previousBlockHash, blockHash);
 
+  // 2. 블록 전파
+  const requestPromises = [];
+  bitcoin.netWorkNodes.forEach(networkNodeUrl => {
+    const requestOptions = {
+      url: networkNodeUrl + '/receive-new-block',
+      method: 'post',
+      headers: {'Content-Type': 'application/json'},
+      data: { newBlock }
+    }
+    requestPromises.push(axios(requestOptions));
+  })
+
+  // 3. 채굴보상 트랜잭션 전파
+  Promise.all(requestPromises)
+  .then(data => {
+    const requestOptions = {
+      url: bitcoin.currentNodeUrl + '/transaction/broadcast',
+      method: 'post',
+      headers: {'Content-Type': 'application/json'},
+      data: {
+        amount: 12.5,
+        sender: "00",
+        recipient: nodeAddress
+      }
+    }
+
+    return axios(requestOptions);
+  })
+
   return res.json({
-    note: "New block mined successfully",
+    note: "New block mined & broadcast successfully",
     block: newBlock
   })
 });
+
+app.post('/receive-new-block', (req, res) => {
+  const {newBlock} = req.body;
+  const lastBlock = bitcoin.getLastBlock();
+
+  const correctHash = lastBlock.hash === newBlock.previousBlockHash;
+  const correctIndex = lastBlock['index'] + 1 === newBlock['index'];
+
+  if(correctHash && correctIndex) {
+    bitcoin.chain.push(newBlock);
+    bitcoin.pendingTransactions = [];
+
+    return res.json({
+      note: 'New Block received and accepted.',
+      newBlock: newBlock
+    })
+  } else {
+    res.json({
+      note: 'New Block rejected.',
+      newBlock: newBlock
+    })
+  }
+})
 
 //새 노드를 자체 서버에 등록하고 다른 모든 네트워크 노드들로 브로드캐스트
 app.post('/register-and-braodcast-node', (req, res) => {
