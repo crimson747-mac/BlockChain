@@ -1,8 +1,14 @@
+const currentNodeUrl = process.argv[3];
+
 const sha256 = require('sha256');
 
 function BlockChain() {
   this.chain = []; // 채굴한 모든 블록이  배열 안에 체인으로 저장
   this.pendingTransactions = []; // 블록에 아직 저장되지 않은 모든 트랜잭션을 저장
+
+  this.currentNodeUrl = currentNodeUrl;
+  this.netWorkNodes = [];
+
   this.createNewBlock(100, '0', '0');
 }
 
