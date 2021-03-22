@@ -240,6 +240,30 @@ app.get('/consensus', (req, res) => {
   })
 })
 
+app.get('/block/:blockHash', (req, res) => {
+  const {blockHash} = req.params;
+  const correctBlock = bitcoin.getBlock(blockHash);
+
+  return res.json({block: correctBlock});
+});
+
+app.get('/transaction/:transactionId', (req, res) => {
+  const {transactionId} = req.params;
+  const transactionData = bitcoin.getTransaction(transactionId);
+
+  return res.json({
+    transaction: transactionData.transaction,
+    block: transactionData.block
+  });
+});
+
+app.get('/address/:address', (req, res) => {
+  const {address} = req.params;
+  const addressData = bitcoin.getAddressData(address);
+
+  res.json({addressData});
+})
+
 app.listen(port, () => {
   console.log(`http://localhost:${port}`);
 });
