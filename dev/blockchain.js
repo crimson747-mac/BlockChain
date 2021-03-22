@@ -102,4 +102,46 @@ BlockChain.prototype.proofOfWork = function(previousBlockHash, currentBlockData)
   return nonce;
 }
 
+/**
+ * 블록체인 검증: 네크워트 내의 다른 체인들을 현재 노드의 체인과 비교함으로써 검증한다.
+ * - 블록체인 내의 모든 블록의 순회하며 해당 블록의 previousBlockHash 속성이 이전의 블록 hash 와 정활히 일치하는지 확인
+ * @param {object} blockchain 
+ */
+BlockChain.prototype.chainIsValid = function(blockchain) {
+  let validChain = true;
+
+  for(let i = 1; i < blockchain.length; i++) {
+    // 1. 모든 해시값이 제대로 정렬되어 있는지 검증
+    const currentBlock = blockchain[i];
+    const prevBlock  = blockchain[i -1];
+
+    if(currentBlock['previousBlockHash'] !== prevBlock['hash']) {
+      validChain = false;
+    }
+
+    // 2. 각 블록의 blockHash 값이 0000 으로 시작하는지 검증
+    const blockHash = this.hashBlock(
+      prevBlock['hash'],
+      { transactions: currentBlock['transactions'], index: currentBlock['index'] },
+      currentBlock['nonce']
+    );
+
+    if(blockHash.substring(0, 4) !== '0000') {
+      validChain = false;
+    }
+
+    // 3. 제네시스 블록 검증
+    const genesisBlock = blockchain[0];
+    const isCorrectNonce = genesisBlock['nonce'] === 100;
+    const isCorrectPreviousBlockHash = genesisBlock['previousBlockHash'] === '0';
+    const isCorrectHash = genesisBlock['hash'] === '0'
+
+    if(!isCorrectNonce || !isCorrectPreviousBlockHash || !isCorrectHash) {
+      validChain = false;
+    }
+  }
+
+  return validChain;
+}
+
 module.exports = BlockChain;
